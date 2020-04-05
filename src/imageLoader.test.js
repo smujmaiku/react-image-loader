@@ -1,10 +1,13 @@
 const React = require('react');
-const {
-	ImagesProvider,
-} = require('./ImageLoader');
 
 describe('ImageLoader', () => {
+	const {
+		ImagesProvider,
+	} = require('./ImageLoader');
+
 	it('Should provide', () => {
-		expect(<ImagesProvider/>).toEqual(expect.any(React.Component));
+		expect(<ImagesProvider>
+			<div />
+		</ImagesProvider>).toEqual(expect.any(React.Component));
 	});
 });

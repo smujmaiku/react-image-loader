@@ -5,7 +5,7 @@
  */
 
 import React, {
-	createContext, useContext, useEffect, useReducer,
+	createContext, useContext, useEffect, useReducer, useState,
 } from 'react';
 import propTypes from 'prop-types';
 
@@ -14,7 +14,7 @@ const CHECKER_SRC = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAAAA
 
 export const imagesContext = createContext();
 
-export function cacheReducer(state, { src, image }) {
+export function patchReducer(state, { src, image }) {
 	return {
 		...state,
 		[src]: image,
@@ -46,9 +46,14 @@ export function imageReducer(state, action) {
 	return state;
 }
 
+/**
+ *
+ * @param {Array} list
+ * @returns {Object}
+ */
 export function useImages(list) {
 	const globalReducer = useContext(imagesContext);
-	const localReducer = useReducer(cacheReducer, {});
+	const localReducer = useReducer(patchReducer, {});
 	const [images, addImage] = globalReducer || localReducer;
 
 	const errImage = images[ERROR_IMAGE_SRC];
@@ -87,11 +92,36 @@ export function useImages(list) {
 	return state.images;
 }
 
+/**
+ *
+ * @param {Object} map
+ * @returns {Object}
+ */
+export function useImagesWithMap(map) {
+	const [list, setList] = useState([]);
+	const [result, setResult] = useState({});
+	const images = useImages(list);
+
+	useEffect(() => {
+		setList(Object.values(map));
+	}, [map]);
+
+	useEffect(() => {
+		const res = {};
+		for (const [name, path] of Object.entries(map)) {
+			res[name] = images[path];
+		}
+		setResult(res);
+	}, [images]);
+
+	return result;
+}
+
 export function ImagesProvider(props) {
 	const { children, defaultCheckers } = props;
 
 	const { Provider } = imagesContext;
-	const value = useReducer(cacheReducer, {});
+	const value = useReducer(patchReducer, {});
 	const [, setState] = value;
 
 	useEffect(() => {

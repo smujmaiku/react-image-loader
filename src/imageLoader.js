@@ -129,14 +129,15 @@ export function useImagesFromMap(map) {
  * Use Images from an ImportAll
  * https://webpack.js.org/guides/dependency-management/#context-module-api
  * @param {Require.Context} ctx
- * @param {string} type default|name|nameWithDir
+ * @param {Array} list
+ * @param {string?} type default|name|nameWithDir
  * @example
  * const assetContext = require.context('../assets/', false, /\.png$/);
  * export default function User() {
- *   const assets = useImagesFromContext(assetContext, 'name');
+ *   const assets = useImagesFromContext(assetContext, ['favicon'], 'name');
  * }
  */
-export function useImagesFromContext(ctx, type = 'default') {
+export function useImagesFromContext(ctx, list, type = 'default') {
 	const [map, setMap] = useState({});
 
 	useEffect(() => {
@@ -155,10 +156,11 @@ export function useImagesFromContext(ctx, type = 'default') {
 
 		const res = {};
 		for (const key of ctx.keys()) {
-			res[pathMutate(key)] = ctx(key);
+			const path = pathMutate(key);
+			if (list.includes(path)) res[path] = ctx(key);
 		}
 		setMap(res);
-	}, [ctx, type]);
+	}, [ctx, list, type]);
 
 	return useImagesFromMap(map);
 }

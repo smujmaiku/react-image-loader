@@ -4,6 +4,7 @@
  * MIT Licensed
  */
 
+import { parse as parsePath } from 'path';
 import React, {
 	createContext, useContext, useEffect, useReducer, useState,
 } from 'react';
@@ -76,18 +77,25 @@ export function useImages(list) {
 			if (!image) {
 				const newImage = new Image();
 				newImage.onload = () => addImage({ src, image: newImage });
-				newImage.onerror = () => addImage({ src, image: errImage });
+				newImage.onerror = () => addImage({ src, image: newImage });
 				newImage.src = src;
 				addImage({ src, image: newImage });
-			} else if (image.complete) {
+			} else if (!image.complete) {
+			} else if (image.naturalWidth > 0) {
 				dispatch({
 					type: 'SET',
 					src,
 					image,
 				});
+			} else {
+				dispatch({
+					type: 'SET',
+					src,
+					image: errImage || image,
+				});
 			}
 		}
-	}, [list, images]);
+	}, [list, images, errImage]);
 
 	return state.images;
 }
@@ -97,7 +105,7 @@ export function useImages(list) {
  * @param {Object} map
  * @returns {Object}
  */
-export function useImagesWithMap(map) {
+export function useImagesFromMap(map) {
 	const [list, setList] = useState([]);
 	const [result, setResult] = useState({});
 	const images = useImages(list);
@@ -115,6 +123,44 @@ export function useImagesWithMap(map) {
 	}, [images]);
 
 	return result;
+}
+
+/**
+ * Use Images from an ImportAll
+ * https://webpack.js.org/guides/dependency-management/#context-module-api
+ * @param {Require.Context} ctx
+ * @param {string} type default|name|nameWithDir
+ * @example
+ * const assetContext = require.context('../assets/', false, /\.png$/);
+ * export default function User() {
+ *   const assets = useImagesFromContext(assetContext, 'name');
+ * }
+ */
+export function useImagesFromContext(ctx, type = 'default') {
+	const [map, setMap] = useState({});
+
+	useEffect(() => {
+		let pathMutate = path => path;
+		switch (type) {
+		case 'name':
+			pathMutate = path => parsePath(path).name;
+			break;
+		case 'nameWithDir':
+			pathMutate = path => {
+				const { dir, name } = parsePath(path);
+				return `${dir}/${name}`;
+			};
+			break;
+		}
+
+		const res = {};
+		for (const key of ctx.keys()) {
+			res[pathMutate(key)] = ctx(key);
+		}
+		setMap(res);
+	}, [ctx, type]);
+
+	return useImagesFromMap(map);
 }
 
 export function ImagesProvider(props) {

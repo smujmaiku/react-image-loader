@@ -5,11 +5,15 @@ function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "functi
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.cacheReducer = cacheReducer;
+exports.patchReducer = patchReducer;
 exports.imageReducer = imageReducer;
 exports.useImages = useImages;
+exports.useImagesFromMap = useImagesFromMap;
+exports.useImagesFromContext = useImagesFromContext;
 exports.ImagesProvider = ImagesProvider;
 exports.imagesContext = void 0;
+
+var _path = require("path");
 
 var _react = _interopRequireWildcard(require("react"));
 
@@ -46,7 +50,7 @@ var CHECKER_SRC = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAAAAAD
 var imagesContext = (0, _react.createContext)();
 exports.imagesContext = imagesContext;
 
-function cacheReducer(state, _ref) {
+function patchReducer(state, _ref) {
   var src = _ref.src,
       image = _ref.image;
   return _objectSpread({}, state, _defineProperty({}, src, image));
@@ -76,10 +80,16 @@ function imageReducer(state, action) {
 
   return state;
 }
+/**
+ *
+ * @param {Array} list
+ * @returns {Object}
+ */
+
 
 function useImages(list) {
   var globalReducer = (0, _react.useContext)(imagesContext);
-  var localReducer = (0, _react.useReducer)(cacheReducer, {});
+  var localReducer = (0, _react.useReducer)(patchReducer, {});
 
   var _ref2 = globalReducer || localReducer,
       _ref3 = _slicedToArray(_ref2, 2),
@@ -124,7 +134,7 @@ function useImages(list) {
           newImage.onerror = function () {
             return addImage({
               src: src,
-              image: errImage
+              image: newImage
             });
           };
 
@@ -133,11 +143,17 @@ function useImages(list) {
             src: src,
             image: newImage
           });
-        } else if (image.complete) {
+        } else if (!image.complete) {} else if (image.naturalWidth > 0) {
           dispatch({
             type: 'SET',
             src: src,
             image: image
+          });
+        } else {
+          dispatch({
+            type: 'SET',
+            src: src,
+            image: errImage || image
           });
         }
       };
@@ -150,15 +166,118 @@ function useImages(list) {
     } finally {
       _iterator.f();
     }
-  }, [list, images]);
+  }, [list, images, errImage]);
   return state.images;
+}
+/**
+ *
+ * @param {Object} map
+ * @returns {Object}
+ */
+
+
+function useImagesFromMap(map) {
+  var _useState = (0, _react.useState)([]),
+      _useState2 = _slicedToArray(_useState, 2),
+      list = _useState2[0],
+      setList = _useState2[1];
+
+  var _useState3 = (0, _react.useState)({}),
+      _useState4 = _slicedToArray(_useState3, 2),
+      result = _useState4[0],
+      setResult = _useState4[1];
+
+  var images = useImages(list);
+  (0, _react.useEffect)(function () {
+    setList(Object.values(map));
+  }, [map]);
+  (0, _react.useEffect)(function () {
+    var res = {};
+
+    for (var _i2 = 0, _Object$entries = Object.entries(map); _i2 < _Object$entries.length; _i2++) {
+      var _Object$entries$_i = _slicedToArray(_Object$entries[_i2], 2),
+          name = _Object$entries$_i[0],
+          path = _Object$entries$_i[1];
+
+      res[name] = images[path];
+    }
+
+    setResult(res);
+  }, [images]);
+  return result;
+}
+/**
+ * Use Images from an ImportAll
+ * https://webpack.js.org/guides/dependency-management/#context-module-api
+ * @param {Require.Context} ctx
+ * @param {string} type default|name|nameWithDir
+ * @example
+ * const assetContext = require.context('../assets/', false, /\.png$/);
+ * export default function User() {
+ *   const assets = useImagesFromContext(assetContext, 'name');
+ * }
+ */
+
+
+function useImagesFromContext(ctx) {
+  var type = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'default';
+
+  var _useState5 = (0, _react.useState)({}),
+      _useState6 = _slicedToArray(_useState5, 2),
+      map = _useState6[0],
+      setMap = _useState6[1];
+
+  (0, _react.useEffect)(function () {
+    var pathMutate = function pathMutate(path) {
+      return path;
+    };
+
+    switch (type) {
+      case 'name':
+        pathMutate = function pathMutate(path) {
+          return (0, _path.parse)(path).name;
+        };
+
+        break;
+
+      case 'nameWithDir':
+        pathMutate = function pathMutate(path) {
+          var _parsePath = (0, _path.parse)(path),
+              dir = _parsePath.dir,
+              name = _parsePath.name;
+
+          return "".concat(dir, "/").concat(name);
+        };
+
+        break;
+    }
+
+    var res = {};
+
+    var _iterator2 = _createForOfIteratorHelper(ctx.keys()),
+        _step2;
+
+    try {
+      for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+        var key = _step2.value;
+        res[pathMutate(key)] = ctx(key);
+      }
+    } catch (err) {
+      _iterator2.e(err);
+    } finally {
+      _iterator2.f();
+    }
+
+    setMap(res);
+  }, [ctx, type]);
+  return useImagesFromMap(map);
 }
 
 function ImagesProvider(props) {
   var children = props.children,
       defaultCheckers = props.defaultCheckers;
   var Provider = imagesContext.Provider;
-  var value = (0, _react.useReducer)(cacheReducer, {});
+  var value = (0, _react.useReducer)(patchReducer, {});
 
   var _value = _slicedToArray(value, 2),
       setState = _value[1];

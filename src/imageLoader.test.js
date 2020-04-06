@@ -6,8 +6,10 @@ describe('ImageLoader', () => {
 	} = require('./ImageLoader');
 
 	it('Should provide', () => {
-		expect(<ImagesProvider>
-			<div />
-		</ImagesProvider>).toEqual(expect.any(React.Component));
+		expect((
+			<ImagesProvider>
+				<div />
+			</ImagesProvider>
+		)).toEqual(expect.any(React.Component));
 	});
 });

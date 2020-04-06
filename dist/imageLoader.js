@@ -210,17 +210,18 @@ function useImagesFromMap(map) {
  * Use Images from an ImportAll
  * https://webpack.js.org/guides/dependency-management/#context-module-api
  * @param {Require.Context} ctx
- * @param {string} type default|name|nameWithDir
+ * @param {Array} list
+ * @param {string?} type default|name|nameWithDir
  * @example
  * const assetContext = require.context('../assets/', false, /\.png$/);
  * export default function User() {
- *   const assets = useImagesFromContext(assetContext, 'name');
+ *   const assets = useImagesFromContext(assetContext, ['favicon'], 'name');
  * }
  */
 
 
-function useImagesFromContext(ctx) {
-  var type = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'default';
+function useImagesFromContext(ctx, list) {
+  var type = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 'default';
 
   var _useState5 = (0, _react.useState)({}),
       _useState6 = _slicedToArray(_useState5, 2),
@@ -260,7 +261,8 @@ function useImagesFromContext(ctx) {
     try {
       for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
         var key = _step2.value;
-        res[pathMutate(key)] = ctx(key);
+        var path = pathMutate(key);
+        if (list.includes(path)) res[path] = ctx(key);
       }
     } catch (err) {
       _iterator2.e(err);
@@ -269,7 +271,7 @@ function useImagesFromContext(ctx) {
     }
 
     setMap(res);
-  }, [ctx, type]);
+  }, [ctx, list, type]);
   return useImagesFromMap(map);
 }
 

@@ -14,7 +14,7 @@ Babel with `import`
 
 ```jsx
 import React from 'react';
-import CanvasResize from 'react-image-loader';
+import { useImages } from 'react-image-loader';
 
 const Component = (props) => {
 	const images = useImages(['/img/picture.png']);

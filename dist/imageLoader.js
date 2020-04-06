@@ -11,7 +11,7 @@ exports.useImages = useImages;
 exports.useImagesFromMap = useImagesFromMap;
 exports.useImagesFromContext = useImagesFromContext;
 exports.ImagesProvider = ImagesProvider;
-exports.imagesContext = void 0;
+exports.imagesContext = exports.mutatePathNameWithDir = exports.mutatePathName = void 0;
 
 var _path = require("path");
 
@@ -47,6 +47,22 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
 var ERROR_IMAGE_SRC = '_';
 var CHECKER_SRC = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAAAAADhZOFXAAAACXBIWXMAAC4jAAAuIwF4pT92AAAAH0lEQVQI12NMY2BgSGNgYGBigAJMBuMZBgaGWfjVAABn6gJB1NL6yQAAAABJRU5ErkJggg==';
+
+var mutatePathName = function mutatePathName(path) {
+  return (0, _path.parse)(path).name;
+};
+
+exports.mutatePathName = mutatePathName;
+
+var mutatePathNameWithDir = function mutatePathNameWithDir(path) {
+  var _parsePath = (0, _path.parse)(path),
+      dir = _parsePath.dir,
+      name = _parsePath.name;
+
+  return "".concat(dir, "/").concat(name);
+};
+
+exports.mutatePathNameWithDir = mutatePathNameWithDir;
 var imagesContext = (0, _react.createContext)();
 exports.imagesContext = imagesContext;
 
@@ -113,6 +129,8 @@ function useImages(list) {
     });
   }, [list]);
   (0, _react.useEffect)(function () {
+    var cleanup = [];
+
     var _iterator = _createForOfIteratorHelper(list),
         _step;
 
@@ -143,7 +161,24 @@ function useImages(list) {
             src: src,
             image: newImage
           });
-        } else if (!image.complete) {} else if (image.naturalWidth > 0) {
+          cleanup.push(newImage);
+        } else if (!image.complete) {
+          image.onload = function () {
+            return addImage({
+              src: src,
+              image: image
+            });
+          };
+
+          image.onerror = function () {
+            return addImage({
+              src: src,
+              image: image
+            });
+          };
+
+          cleanup.push(image);
+        } else if (image.naturalWidth > 0) {
           dispatch({
             type: 'SET',
             src: src,
@@ -166,6 +201,25 @@ function useImages(list) {
     } finally {
       _iterator.f();
     }
+
+    return function () {
+      var _iterator2 = _createForOfIteratorHelper(cleanup),
+          _step2;
+
+      try {
+        for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+          var image = _step2.value;
+
+          image.onload = function () {};
+
+          image.onerror = function () {};
+        }
+      } catch (err) {
+        _iterator2.e(err);
+      } finally {
+        _iterator2.f();
+      }
+    };
   }, [list, images, errImage]);
   return state.images;
 }
@@ -235,39 +289,29 @@ function useImagesFromContext(ctx, list) {
 
     switch (type) {
       case 'name':
-        pathMutate = function pathMutate(path) {
-          return (0, _path.parse)(path).name;
-        };
-
+        pathMutate = mutatePathName;
         break;
 
       case 'nameWithDir':
-        pathMutate = function pathMutate(path) {
-          var _parsePath = (0, _path.parse)(path),
-              dir = _parsePath.dir,
-              name = _parsePath.name;
-
-          return "".concat(dir, "/").concat(name);
-        };
-
+        pathMutate = mutatePathNameWithDir;
         break;
     }
 
     var res = {};
 
-    var _iterator2 = _createForOfIteratorHelper(ctx.keys()),
-        _step2;
+    var _iterator3 = _createForOfIteratorHelper(ctx.keys()),
+        _step3;
 
     try {
-      for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
-        var key = _step2.value;
+      for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+        var key = _step3.value;
         var path = pathMutate(key);
         if (list.includes(path)) res[path] = ctx(key);
       }
     } catch (err) {
-      _iterator2.e(err);
+      _iterator3.e(err);
     } finally {
-      _iterator2.f();
+      _iterator3.f();
     }
 
     setMap(res);

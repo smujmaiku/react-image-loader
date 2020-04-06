@@ -13,6 +13,12 @@ import propTypes from 'prop-types';
 const ERROR_IMAGE_SRC = '_';
 const CHECKER_SRC = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAAAAADhZOFXAAAACXBIWXMAAC4jAAAuIwF4pT92AAAAH0lEQVQI12NMY2BgSGNgYGBigAJMBuMZBgaGWfjVAABn6gJB1NL6yQAAAABJRU5ErkJggg==';
 
+export const mutatePathName = path => parsePath(path).name;
+export const mutatePathNameWithDir = path => {
+	const { dir, name } = parsePath(path);
+	return `${dir}/${name}`;
+};
+
 export const imagesContext = createContext();
 
 export function patchReducer(state, { src, image }) {
@@ -72,6 +78,7 @@ export function useImages(list) {
 	}, [list]);
 
 	useEffect(() => {
+		const cleanup = [];
 		for (const src of list) {
 			const image = images[src];
 			if (!image) {
@@ -80,7 +87,11 @@ export function useImages(list) {
 				newImage.onerror = () => addImage({ src, image: newImage });
 				newImage.src = src;
 				addImage({ src, image: newImage });
+				cleanup.push(newImage);
 			} else if (!image.complete) {
+				image.onload = () => addImage({ src, image: image });
+				image.onerror = () => addImage({ src, image: image });
+				cleanup.push(image);
 			} else if (image.naturalWidth > 0) {
 				dispatch({
 					type: 'SET',
@@ -95,6 +106,12 @@ export function useImages(list) {
 				});
 			}
 		}
+		return () => {
+			for (const image of cleanup) {
+				image.onload = () => {};
+				image.onerror = () => {};
+			}
+		};
 	}, [list, images, errImage]);
 
 	return state.images;
@@ -144,13 +161,10 @@ export function useImagesFromContext(ctx, list, type = 'default') {
 		let pathMutate = path => path;
 		switch (type) {
 		case 'name':
-			pathMutate = path => parsePath(path).name;
+			pathMutate = mutatePathName;
 			break;
 		case 'nameWithDir':
-			pathMutate = path => {
-				const { dir, name } = parsePath(path);
-				return `${dir}/${name}`;
-			};
+			pathMutate = mutatePathNameWithDir;
 			break;
 		}
 

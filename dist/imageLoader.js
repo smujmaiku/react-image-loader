@@ -13,17 +13,17 @@ exports.useImagesFromContext = useImagesFromContext;
 exports.ImagesProvider = ImagesProvider;
 exports.imagesContext = exports.mutatePathNameWithDir = exports.mutatePathName = void 0;
 
-var _path = require("path");
+var _path = _interopRequireDefault(require("path"));
 
 var _react = _interopRequireWildcard(require("react"));
 
 var _propTypes = _interopRequireDefault(require("prop-types"));
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
-
 function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function _getRequireWildcardCache() { return cache; }; return cache; }
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || _typeof(obj) !== "object" && typeof obj !== "function") { return { "default": obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj["default"] = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 
 function _createForOfIteratorHelper(o) { if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (o = _unsupportedIterableToArray(o))) { var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e2) { throw _e2; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var it, normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e3) { didErr = true; err = _e3; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
 
@@ -48,18 +48,14 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 var ERROR_IMAGE_SRC = '_';
 var CHECKER_SRC = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAAAAADhZOFXAAAACXBIWXMAAC4jAAAuIwF4pT92AAAAH0lEQVQI12NMY2BgSGNgYGBigAJMBuMZBgaGWfjVAABn6gJB1NL6yQAAAABJRU5ErkJggg==';
 
-var mutatePathName = function mutatePathName(path) {
-  return (0, _path.parse)(path).name;
+var mutatePathName = function mutatePathName(uri) {
+  return _path["default"].basename(uri, _path["default"].extname(uri));
 };
 
 exports.mutatePathName = mutatePathName;
 
-var mutatePathNameWithDir = function mutatePathNameWithDir(path) {
-  var _parsePath = (0, _path.parse)(path),
-      dir = _parsePath.dir,
-      name = _parsePath.name;
-
-  return "".concat(dir, "/").concat(name);
+var mutatePathNameWithDir = function mutatePathNameWithDir(uri) {
+  return uri.slice(0, -_path["default"].extname(uri).length);
 };
 
 exports.mutatePathNameWithDir = mutatePathNameWithDir;
@@ -251,9 +247,9 @@ function useImagesFromMap(map) {
     for (var _i2 = 0, _Object$entries = Object.entries(map); _i2 < _Object$entries.length; _i2++) {
       var _Object$entries$_i = _slicedToArray(_Object$entries[_i2], 2),
           name = _Object$entries$_i[0],
-          path = _Object$entries$_i[1];
+          uri = _Object$entries$_i[1];
 
-      res[name] = images[path];
+      res[name] = images[uri];
     }
 
     setResult(res);
@@ -283,8 +279,8 @@ function useImagesFromContext(ctx, list) {
       setMap = _useState6[1];
 
   (0, _react.useEffect)(function () {
-    var pathMutate = function pathMutate(path) {
-      return path;
+    var pathMutate = function pathMutate(uri) {
+      return uri;
     };
 
     switch (type) {
@@ -305,8 +301,8 @@ function useImagesFromContext(ctx, list) {
     try {
       for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
         var key = _step3.value;
-        var path = pathMutate(key);
-        if (list.includes(path)) res[path] = ctx(key);
+        var uri = pathMutate(key);
+        if (list.includes(uri)) res[uri] = ctx(key);
       }
     } catch (err) {
       _iterator3.e(err);

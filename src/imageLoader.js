@@ -4,7 +4,7 @@
  * MIT Licensed
  */
 
-import { parse as parsePath } from 'path';
+import path from 'path';
 import React, {
 	createContext, useContext, useEffect, useReducer, useState,
 } from 'react';
@@ -13,11 +13,8 @@ import propTypes from 'prop-types';
 const ERROR_IMAGE_SRC = '_';
 const CHECKER_SRC = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAAAAADhZOFXAAAACXBIWXMAAC4jAAAuIwF4pT92AAAAH0lEQVQI12NMY2BgSGNgYGBigAJMBuMZBgaGWfjVAABn6gJB1NL6yQAAAABJRU5ErkJggg==';
 
-export const mutatePathName = path => parsePath(path).name;
-export const mutatePathNameWithDir = path => {
-	const { dir, name } = parsePath(path);
-	return `${dir}/${name}`;
-};
+export const mutatePathName = uri => path.basename(uri, path.extname(uri));
+export const mutatePathNameWithDir = uri => uri.slice(0, -path.extname(uri).length);
 
 export const imagesContext = createContext();
 
@@ -133,8 +130,8 @@ export function useImagesFromMap(map) {
 
 	useEffect(() => {
 		const res = {};
-		for (const [name, path] of Object.entries(map)) {
-			res[name] = images[path];
+		for (const [name, uri] of Object.entries(map)) {
+			res[name] = images[uri];
 		}
 		setResult(res);
 	}, [images]);
@@ -158,7 +155,7 @@ export function useImagesFromContext(ctx, list, type = 'default') {
 	const [map, setMap] = useState({});
 
 	useEffect(() => {
-		let pathMutate = path => path;
+		let pathMutate = uri => uri;
 		switch (type) {
 		case 'name':
 			pathMutate = mutatePathName;
@@ -170,8 +167,8 @@ export function useImagesFromContext(ctx, list, type = 'default') {
 
 		const res = {};
 		for (const key of ctx.keys()) {
-			const path = pathMutate(key);
-			if (list.includes(path)) res[path] = ctx(key);
+			const uri = pathMutate(key);
+			if (list.includes(uri)) res[uri] = ctx(key);
 		}
 		setMap(res);
 	}, [ctx, list, type]);

@@ -13,8 +13,8 @@ import propTypes from 'prop-types';
 const ERROR_IMAGE_SRC = '_';
 const CHECKER_SRC = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAAAAADhZOFXAAAACXBIWXMAAC4jAAAuIwF4pT92AAAAH0lEQVQI12NMY2BgSGNgYGBigAJMBuMZBgaGWfjVAABn6gJB1NL6yQAAAABJRU5ErkJggg==';
 
-export const mutatePathName = uri => path.basename(uri, path.extname(uri));
-export const mutatePathNameWithDir = uri => uri.slice(0, -path.extname(uri).length);
+export const mutatePathName = (uri) => path.basename(uri, path.extname(uri));
+export const mutatePathNameWithDir = (uri) => uri.slice(0, -path.extname(uri).length);
 
 export const imagesContext = createContext();
 
@@ -76,18 +76,21 @@ export function useImages(list) {
 
 	useEffect(() => {
 		const cleanup = [];
+		/* eslint-disable no-restricted-syntax */
 		for (const src of list) {
 			const image = images[src];
 			if (!image) {
 				const newImage = new Image();
-				newImage.onload = () => addImage({ src, image: newImage });
-				newImage.onerror = () => addImage({ src, image: newImage });
-				newImage.src = src;
+				if (src !== ERROR_IMAGE_SRC) {
+					newImage.onload = () => addImage({ src, image: newImage });
+					newImage.onerror = () => addImage({ src, image: newImage });
+					cleanup.push(newImage);
+					newImage.src = src;
+				}
 				addImage({ src, image: newImage });
-				cleanup.push(newImage);
 			} else if (!image.complete) {
-				image.onload = () => addImage({ src, image: image });
-				image.onerror = () => addImage({ src, image: image });
+				image.onload = () => addImage({ src, image });
+				image.onerror = () => addImage({ src, image });
 				cleanup.push(image);
 			} else if (image.naturalWidth > 0) {
 				dispatch({
@@ -109,6 +112,7 @@ export function useImages(list) {
 				image.onerror = () => {};
 			}
 		};
+	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [list, images, errImage]);
 
 	return state.images;
@@ -134,6 +138,7 @@ export function useImagesFromMap(map) {
 			res[name] = images[uri];
 		}
 		setResult(res);
+	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [images]);
 
 	return result;
@@ -155,25 +160,55 @@ export function useImagesFromContext(ctx, list, type = 'default') {
 	const [map, setMap] = useState({});
 
 	useEffect(() => {
-		let pathMutate = uri => uri;
-		switch (type) {
-		case 'name':
-			pathMutate = mutatePathName;
-			break;
-		case 'nameWithDir':
-			pathMutate = mutatePathNameWithDir;
-			break;
+		const pathMutate = {
+			name: mutatePathName,
+			pathMutate: mutatePathNameWithDir,
+		}[type] || ((uri) => uri);
+
+		const keys = ctx.keys();
+		const res = {};
+
+		for (const key of list) {
+			res[key] = ERROR_IMAGE_SRC;
 		}
 
-		const res = {};
-		for (const key of ctx.keys()) {
+		for (const key of keys) {
 			const uri = pathMutate(key);
 			if (list.includes(uri)) res[uri] = ctx(key);
 		}
+
 		setMap(res);
 	}, [ctx, list, type]);
 
 	return useImagesFromMap(map);
+}
+
+/**
+ * Use Image from an ImportAll
+ * https://webpack.js.org/guides/dependency-management/#context-module-api
+ * @param {Require.Context} ctx
+ * @param {string} file
+ * @param {string?} type default|name|nameWithDir
+ * @example
+ * const assetContext = require.context('../assets/', false, /\.png$/);
+ * export default function User() {
+ *   const asset = useImageFromContext(assetContext, 'favicon', 'name');
+ * }
+ */
+export function useImageFromContext(ctx, file, type = 'default') {
+	const [list, setList] = useState([file]);
+	const [image, setImage] = useState();
+	const images = useImagesFromContext(ctx, list, type);
+
+	useEffect(() => {
+		setList([file]);
+	}, [file]);
+
+	useEffect(() => {
+		setImage(Object.values(images)[0]);
+	}, [images]);
+
+	return image;
 }
 
 export function ImagesProvider(props) {
@@ -189,7 +224,8 @@ export function ImagesProvider(props) {
 			image.src = CHECKER_SRC;
 			setState({ src: ERROR_IMAGE_SRC, image });
 		}
-	}, []);
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [defaultCheckers]);
 
 	return (
 		<Provider value={value}>

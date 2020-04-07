@@ -22,8 +22,6 @@
   },
   "homepage": "https://github.com/smujmaiku/react-image-loader#readme",
   "dependencies": {
-    "moremath-js": "github:smujmaiku/moremath-js",
-    "path": "^0.12.7",
     "prop-types": "^15.7.2",
     "react": "^16.13.1"
   },

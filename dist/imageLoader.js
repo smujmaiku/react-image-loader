@@ -10,6 +10,7 @@ exports.imageReducer = imageReducer;
 exports.useImages = useImages;
 exports.useImagesFromMap = useImagesFromMap;
 exports.useImagesFromContext = useImagesFromContext;
+exports.useImageFromContext = useImageFromContext;
 exports.ImagesProvider = ImagesProvider;
 exports.imagesContext = exports.mutatePathNameWithDir = exports.mutatePathName = void 0;
 
@@ -126,6 +127,7 @@ function useImages(list) {
   }, [list]);
   (0, _react.useEffect)(function () {
     var cleanup = [];
+    /* eslint-disable no-restricted-syntax */
 
     var _iterator = _createForOfIteratorHelper(list),
         _step;
@@ -138,26 +140,29 @@ function useImages(list) {
         if (!image) {
           var newImage = new Image();
 
-          newImage.onload = function () {
-            return addImage({
-              src: src,
-              image: newImage
-            });
-          };
+          if (src !== ERROR_IMAGE_SRC) {
+            newImage.onload = function () {
+              return addImage({
+                src: src,
+                image: newImage
+              });
+            };
 
-          newImage.onerror = function () {
-            return addImage({
-              src: src,
-              image: newImage
-            });
-          };
+            newImage.onerror = function () {
+              return addImage({
+                src: src,
+                image: newImage
+              });
+            };
 
-          newImage.src = src;
+            cleanup.push(newImage);
+            newImage.src = src;
+          }
+
           addImage({
             src: src,
             image: newImage
           });
-          cleanup.push(newImage);
         } else if (!image.complete) {
           image.onload = function () {
             return addImage({
@@ -215,7 +220,7 @@ function useImages(list) {
       } finally {
         _iterator2.f();
       }
-    };
+    }; // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [list, images, errImage]);
   return state.images;
 }
@@ -252,7 +257,7 @@ function useImagesFromMap(map) {
       res[name] = images[uri];
     }
 
-    setResult(res);
+    setResult(res); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [images]);
   return result;
 }
@@ -279,30 +284,23 @@ function useImagesFromContext(ctx, list) {
       setMap = _useState6[1];
 
   (0, _react.useEffect)(function () {
-    var pathMutate = function pathMutate(uri) {
+    var pathMutate = {
+      name: mutatePathName,
+      pathMutate: mutatePathNameWithDir
+    }[type] || function (uri) {
       return uri;
     };
 
-    switch (type) {
-      case 'name':
-        pathMutate = mutatePathName;
-        break;
-
-      case 'nameWithDir':
-        pathMutate = mutatePathNameWithDir;
-        break;
-    }
-
+    var keys = ctx.keys();
     var res = {};
 
-    var _iterator3 = _createForOfIteratorHelper(ctx.keys()),
+    var _iterator3 = _createForOfIteratorHelper(list),
         _step3;
 
     try {
       for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
         var key = _step3.value;
-        var uri = pathMutate(key);
-        if (list.includes(uri)) res[uri] = ctx(key);
+        res[key] = ERROR_IMAGE_SRC;
       }
     } catch (err) {
       _iterator3.e(err);
@@ -310,9 +308,60 @@ function useImagesFromContext(ctx, list) {
       _iterator3.f();
     }
 
+    var _iterator4 = _createForOfIteratorHelper(keys),
+        _step4;
+
+    try {
+      for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+        var _key = _step4.value;
+        var uri = pathMutate(_key);
+        if (list.includes(uri)) res[uri] = ctx(_key);
+      }
+    } catch (err) {
+      _iterator4.e(err);
+    } finally {
+      _iterator4.f();
+    }
+
     setMap(res);
   }, [ctx, list, type]);
   return useImagesFromMap(map);
+}
+/**
+ * Use Image from an ImportAll
+ * https://webpack.js.org/guides/dependency-management/#context-module-api
+ * @param {Require.Context} ctx
+ * @param {string} file
+ * @param {string?} type default|name|nameWithDir
+ * @example
+ * const assetContext = require.context('../assets/', false, /\.png$/);
+ * export default function User() {
+ *   const asset = useImageFromContext(assetContext, 'favicon', 'name');
+ * }
+ */
+
+
+function useImageFromContext(ctx, file) {
+  var type = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 'default';
+
+  var _useState7 = (0, _react.useState)([file]),
+      _useState8 = _slicedToArray(_useState7, 2),
+      list = _useState8[0],
+      setList = _useState8[1];
+
+  var _useState9 = (0, _react.useState)(),
+      _useState10 = _slicedToArray(_useState9, 2),
+      image = _useState10[0],
+      setImage = _useState10[1];
+
+  var images = useImagesFromContext(ctx, list, type);
+  (0, _react.useEffect)(function () {
+    setList([file]);
+  }, [file]);
+  (0, _react.useEffect)(function () {
+    setImage(Object.values(images)[0]);
+  }, [images]);
+  return image;
 }
 
 function ImagesProvider(props) {
@@ -332,8 +381,9 @@ function ImagesProvider(props) {
         src: ERROR_IMAGE_SRC,
         image: image
       });
-    }
-  }, []);
+    } // eslint-disable-next-line react-hooks/exhaustive-deps
+
+  }, [defaultCheckers]);
   return /*#__PURE__*/_react["default"].createElement(Provider, {
     value: value
   }, children);
